@@ -411,11 +411,20 @@ ul { list-style: none; }
 }
 
 @media (max-width: 900px) {
-    .app-container { flex-direction: column; height: auto; margin-top: 5rem; }
-    .left-section, .middle-section, .right-section { 
-        height: 60vh; 
-        min-height: 400px;
-        max-height: 500px;
+    .app-container { 
+        flex-direction: column; 
+        height: auto; 
+        margin-top: 4rem; 
+        margin-bottom: 4rem; 
     }
-    body { padding: 0.5rem; justify-content: flex-start; }
+    .left-section, .middle-section, .right-section { 
+        height: 55vh; 
+        min-height: 400px;
+        max-height: 600px;
+    }
+    body { 
+        padding: 0.5rem; 
+        align-items: flex-start; 
+        justify-content: center; 
+    }
 }
