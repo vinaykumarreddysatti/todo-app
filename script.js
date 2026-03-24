@@ -33,22 +33,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         async init() {
             if (this.useIDB) {
                 return new Promise((resolve) => {
-                    const request = indexedDB.open('PremiumTodoDB', 1);
-                    request.onupgradeneeded = (e) => {
-                        const db = e.target.result;
-                        if (!db.objectStoreNames.contains('todos')) {
-                            db.createObjectStore('todos', { keyPath: 'id' });
-                        }
-                    };
-                    request.onsuccess = (e) => {
-                        this.db = e.target.result;
-                        resolve();
-                    };
-                    request.onerror = (e) => {
-                        console.warn('IndexedDB initialization failed, falling back to localStorage.', e);
+                    try {
+                        const request = indexedDB.open('PremiumTodoDB', 1);
+                        request.onupgradeneeded = (e) => {
+                            const db = e.target.result;
+                            if (!db.objectStoreNames.contains('todos')) {
+                                db.createObjectStore('todos', { keyPath: 'id' });
+                            }
+                        };
+                        request.onsuccess = (e) => {
+                            this.db = e.target.result;
+                            resolve();
+                        };
+                        request.onerror = (e) => {
+                            console.warn('IndexedDB initialization failed, falling back to localStorage.', e);
+                            this.useIDB = false;
+                            resolve();
+                        };
+                    } catch (error) {
+                        console.warn('IndexedDB synchronous error (often iOS Safari Private Browsing). Falling back to localStorage.', error);
                         this.useIDB = false;
                         resolve();
-                    };
+                    }
                 });
             }
         },
@@ -358,15 +364,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function sortTodos(a, b) {
-        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        const dateA = a.dueDate ? new Date(a.dueDate.replace(/-/g, '/')).getTime() : Infinity;
+        const dateB = b.dueDate ? new Date(b.dueDate.replace(/-/g, '/')).getTime() : Infinity;
         if (dateA !== dateB) return dateA - dateB;
 
         const pA = a.priority || 2;
         const pB = b.priority || 2;
         if (pA !== pB) return pB - pA;
         
-        return new Date(a.createdAt) - new Date(b.createdAt);
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     }
 
     function renderGroupedList(todoArray, containerElement, emptyMessage, isCompletedList=false) {
