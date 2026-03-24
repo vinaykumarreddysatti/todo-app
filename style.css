@@ -272,7 +272,8 @@ ul { list-style: none; }
 .group-list { margin-bottom: 1rem; }
 
 .active-todos-container, .focus-todos-container, .completed-todos-container {
-    flex: 1;
+    flex: 1 1 0px;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 0.5rem;
 }
@@ -425,11 +426,18 @@ ul { list-style: none; }
         gap: 1.5rem;
     }
     .left-section, .middle-section, .right-section { 
-        height: 62vh; 
-        min-height: 400px;
-        max-height: 600px;
+        height: auto;
+        min-height: auto;
+        max-height: none;
         padding: 1.25rem;
         border-radius: 16px;
+    }
+    .active-todos-container, .focus-todos-container, .completed-todos-container {
+        height: 50vh;
+        min-height: 300px;
+        max-height: 500px;
+        overflow-y: auto;
+        flex: none;
     }
     .priority-select, .date-select {
         flex: 1 1 100%;

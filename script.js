@@ -248,7 +248,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function formatTime(isoString) {
+        if (!isoString) return 'Unknown time';
         const date = new Date(isoString);
+        if (isNaN(date.getTime())) return 'Unknown time';
+        
         return date.toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric',
@@ -366,13 +369,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     function sortTodos(a, b) {
         const dateA = a.dueDate ? new Date(a.dueDate.replace(/-/g, '/')).getTime() : Infinity;
         const dateB = b.dueDate ? new Date(b.dueDate.replace(/-/g, '/')).getTime() : Infinity;
-        if (dateA !== dateB) return dateA - dateB;
+        if (dateA !== dateB && !isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
 
         const pA = a.priority || 2;
         const pB = b.priority || 2;
         if (pA !== pB) return pB - pA;
         
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return (timeA || 0) - (timeB || 0);
     }
 
     function renderGroupedList(todoArray, containerElement, emptyMessage, isCompletedList=false) {
@@ -391,9 +396,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isCompletedList) {
                 dateStr = formatDateOnly(todo.completedAt);
             } else if (todo.dueDate) {
-                const parts = todo.dueDate.split('-');
-                const dueObj = new Date(parts[0], parts[1]-1, parts[2]);
-                dateStr = dueObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                let dateStrTemp;
+                if (todo.dueDate.includes('-')) {
+                    const parts = todo.dueDate.split('-');
+                    const dueObj = new Date(parts[0], parts[1]-1, parts[2]);
+                    if (!isNaN(dueObj.getTime())) {
+                        dateStrTemp = dueObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+                } else {
+                    const dueObj = new Date(todo.dueDate);
+                    if (!isNaN(dueObj.getTime())) {
+                        dateStrTemp = dueObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+                }
+                dateStr = dateStrTemp || 'Invalid date';
             }
 
             if (dateStr !== currentGroupDate) {
@@ -419,7 +435,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const activeTodos = todos.filter(t => t.status === 'active').sort(sortTodos);
         const focusTodos = todos.filter(t => t.status === 'focus').sort(sortTodos);
         const completedTodos = todos.filter(t => t.status === 'completed').sort((a, b) => {
-            return new Date(b.completedAt || 0) - new Date(a.completedAt || 0);
+            const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+            const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+            return (timeB || 0) - (timeA || 0);
         });
 
         const newActiveState = JSON.stringify(activeTodos);
