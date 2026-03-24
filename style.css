@@ -411,7 +411,11 @@ ul { list-style: none; }
 }
 
 @media (max-width: 900px) {
-    .app-container { flex-direction: column; height: auto; }
-    .left-section, .middle-section, .right-section { height: 500px; }
-    body { padding: 1rem; }
+    .app-container { flex-direction: column; height: auto; margin-top: 5rem; }
+    .left-section, .middle-section, .right-section { 
+        height: 60vh; 
+        min-height: 400px;
+        max-height: 500px;
+    }
+    body { padding: 0.5rem; justify-content: flex-start; }
 }
