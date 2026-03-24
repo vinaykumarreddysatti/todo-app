@@ -106,10 +106,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Migration for new 'status' field
+    // Migration for new 'status' and 'timeTracking' fields
     todos = todos.map(t => {
         if (!t.status) {
             t.status = t.completed ? 'completed' : 'active';
+            needsSave = true;
+        }
+        if (t.timeSpent === undefined) {
+            t.timeSpent = 0;
+            t.isTracking = false;
+            t.lastTrackStartTime = null;
             needsSave = true;
         }
         return t;
@@ -135,11 +141,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (newStatus === 'completed' && !updated.completedAt) {
                     updated.completedAt = new Date().toISOString();
                 }
+                if (newStatus === 'completed' && updated.isTracking) {
+                    updated.isTracking = false;
+                    const elapsed = Math.floor((Date.now() - new Date(updated.lastTrackStartTime).getTime()) / 1000);
+                    updated.timeSpent += elapsed;
+                    updated.lastTrackStartTime = null;
+                }
                 return updated;
             }
             return todo;
         });
         saveTodos();
+    };
+
+    function silentUpdate(id) {
+        const todo = todos.find(t => t.id === id);
+        if (!todo) return;
+        const li = document.getElementById(`todo-item-${id}`);
+        if (li) {
+            const newLi = createTodoElement(todo);
+            newLi.style.animation = 'none'; // Prevent flashing animation on inline updates
+            li.replaceWith(newLi);
+        }
+        // Update caches so subsequent renderTodos calls don't see a diff
+        const activeTodos = todos.filter(t => t.status === 'active').sort(sortTodos);
+        lastActiveState = JSON.stringify(activeTodos);
+        const focusTodos = todos.filter(t => t.status === 'focus').sort(sortTodos);
+        lastFocusState = JSON.stringify(focusTodos);
+        const completedTodos = todos.filter(t => t.status === 'completed').sort((a, b) => {
+            const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+            const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+            return (timeB || 0) - (timeA || 0);
+        });
+        lastCompletedState = JSON.stringify(completedTodos);
+    }
+
+    window.toggleTimerHandler = (id) => {
+        todos = todos.map(t => {
+            if (t.id === id) {
+                if (t.isTracking) {
+                    t.isTracking = false;
+                    const elapsed = Math.floor((Date.now() - new Date(t.lastTrackStartTime).getTime()) / 1000);
+                    t.timeSpent += elapsed;
+                    t.lastTrackStartTime = null;
+                } else {
+                    t.isTracking = true;
+                    t.lastTrackStartTime = new Date().toISOString();
+                }
+            }
+            return t;
+        });
+        silentUpdate(id);
+        Storage.saveAll(todos);
     };
 
     window.deleteTodoHandler = (id) => {
@@ -152,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(t.id === id) t.isEditing = true;
             return t;
         });
-        renderTodos();
+        silentUpdate(id);
     };
 
     window.saveEditHandler = (id, newText) => {
@@ -164,7 +217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return t;
         });
-        saveTodos();
+        silentUpdate(id);
+        Storage.saveAll(todos);
     };
 
     window.cancelEditHandler = (id) => {
@@ -172,7 +226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(t.id === id) t.isEditing = false;
             return t;
         });
-        renderTodos();
+        silentUpdate(id);
     };
 
     // Drag and Drop Logic
@@ -203,6 +257,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize
     renderTodos();
 
+    setInterval(() => {
+        const trackers = document.querySelectorAll('.timer-display[data-tracking="true"]');
+        trackers.forEach(el => {
+            const id = el.getAttribute('data-id');
+            const todo = todos.find(t => t.id === id);
+            if (todo && todo.isTracking) {
+                const elapsedNow = Math.floor((Date.now() - new Date(todo.lastTrackStartTime).getTime()) / 1000);
+                const total = todo.timeSpent + elapsedNow;
+                el.textContent = formatDuration(total);
+            }
+        });
+    }, 1000);
+
+    function formatDuration(totalSeconds) {
+        if (totalSeconds < 0) totalSeconds = 0;
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
     // Event Listeners
     todoForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -230,7 +308,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             priority: priority,
             dueDate: dueDate,
             status: 'active',
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            timeSpent: 0,
+            isTracking: false,
+            lastTrackStartTime: null
         };
         todos.push(newTodo);
         saveTodos();
@@ -276,6 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isCompleted = todo.status === 'completed';
         const li = document.createElement('li');
         li.className = `todo-item ${isCompleted ? 'completed-item' : ''}`;
+        li.id = `todo-item-${todo.id}`;
         
         if (todo.isEditing) {
             li.innerHTML = `
@@ -314,22 +396,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         const priorityLabels = {1: 'Low', 2: 'Medium', 3: 'High'};
         const priorityNum = todo.priority || 2;
         const priorityBadgeHtml = `<span class="priority-badge priority-${priorityNum}">${priorityLabels[priorityNum]}</span>`;
+        
+        const currentElapsed = todo.isTracking ? Math.floor((Date.now() - new Date(todo.lastTrackStartTime).getTime()) / 1000) : 0;
+        const totalTime = todo.timeSpent + currentElapsed;
+        const timerHtml = (totalTime > 0 || todo.isTracking) ? `<span class="timer-display ${todo.isTracking ? 'active-timer' : ''}" data-id="${todo.id}" data-tracking="${todo.isTracking}">${formatDuration(totalTime)}</span>` : '';
 
         let metaHtml = '';
         if (isCompleted && todo.completedAt) {
             metaHtml = `
                 <div class="meta-row">
                     <span class="completed-date">Completed: ${formatTime(todo.completedAt)}</span>
+                    ${timerHtml}
                 </div>
             `;
         } else {
             metaHtml = `
                 <div class="meta-row">
                     <span class="todo-meta">Added: ${formatTime(todo.createdAt)}</span>
+                    ${timerHtml}
                     ${!isCompleted ? priorityBadgeHtml : ''}
                 </div>
             `;
         }
+        
+        const timerBtnHtml = !isCompleted ? `
+            <button class="btn-icon btn-timer ${todo.isTracking ? 'is-tracking' : ''}" onclick="window.toggleTimerHandler('${todo.id}')" title="${todo.isTracking ? 'Pause' : 'Start Timer'}">
+                ${todo.isTracking ? 
+                    `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>` 
+                    : 
+                    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`
+                }
+            </button>
+        ` : '';
 
         const buttonsHtml = isCompleted ? `
             <div class="action-buttons">
@@ -342,6 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         ` : `
             <div class="action-buttons">
+                ${timerBtnHtml}
                 <button class="btn-icon" onclick="window.editTodoHandler('${todo.id}')" title="Edit">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
