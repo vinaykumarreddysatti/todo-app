@@ -411,16 +411,48 @@ ul { list-style: none; }
 }
 
 @media (max-width: 900px) {
+    .theme-toggle {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 40px;
+        height: 40px;
+    }
     .app-container { 
         flex-direction: column; 
         height: auto; 
-        margin-top: 4rem; 
-        margin-bottom: 4rem; 
+        margin-top: 3.5rem; 
+        margin-bottom: 2rem; 
+        gap: 1.5rem;
     }
     .left-section, .middle-section, .right-section { 
-        height: 55vh; 
+        height: 62vh; 
         min-height: 400px;
         max-height: 600px;
+        padding: 1.25rem;
+        border-radius: 16px;
+    }
+    .priority-select, .date-select {
+        flex: 1 1 100%;
+    }
+    #add-btn {
+        width: 100%;
+        margin-top: 0.25rem;
+    }
+    .todo-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    .action-buttons {
+        margin-left: 0;
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .todo-item {
+        flex-direction: column;
+        align-items: flex-start;
     }
     body { 
         padding: 0.5rem; 
