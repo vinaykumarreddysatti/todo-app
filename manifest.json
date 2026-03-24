@@ -1,0 +1,17 @@
+{
+  "name": "Premium Todo App",
+  "short_name": "Todo",
+  "description": "A premium, dark-mode 3-lane drag-and-drop todo application.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

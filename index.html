@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Todo App</title>
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8b5cf6">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg class="moon-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+    <div class="app-container">
+        <!-- Left Section: Add Todos -->
+        <section class="left-section" id="section-active">
+            <header>
+                <h1>My Tasks</h1>
+                <p>What needs to be done today?</p>
+            </header>
+            
+            <form id="todo-form">
+                <div class="input-group">
+                    <input type="text" id="todo-input" placeholder="E.g., Design the new landing page..." autocomplete="off" required>
+                    <select id="todo-priority" class="priority-select" required>
+                        <option value="1">Low</option>
+                        <option value="2" selected>Medium</option>
+                        <option value="3">High</option>
+                    </select>
+                    <input type="date" id="todo-due-date" class="date-select" required>
+                    <button type="submit" id="add-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+            </form>
+
+            <div class="active-todos-container">
+                <div id="active-todos-list">
+                    <!-- Active todos will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Middle Section: Focus list -->
+        <section class="middle-section" id="section-focus">
+            <header>
+                <h2 class="focus-title">Focus Board</h2>
+                <p>Drag high priority tasks here</p>
+            </header>
+            
+            <div class="focus-todos-container">
+                <div id="focus-todos-list">
+                    <!-- Focus todos will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Section: Completed list -->
+        <section class="right-section" id="section-completed">
+            <header>
+                <h2>Completed</h2>
+                <p>Your recent achievements</p>
+            </header>
+            
+            <div class="completed-todos-container">
+                <div id="completed-todos-list">
+                    <!-- Completed todos will be injected here -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
