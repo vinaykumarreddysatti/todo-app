@@ -34,11 +34,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (this.useIDB) {
                 return new Promise((resolve) => {
                     try {
-                        const request = indexedDB.open('PremiumTodoDB', 1);
+                        const request = indexedDB.open('PremiumTodoDB', 2);
                         request.onupgradeneeded = (e) => {
                             const db = e.target.result;
                             if (!db.objectStoreNames.contains('todos')) {
                                 db.createObjectStore('todos', { keyPath: 'id' });
+                            }
+                            if (!db.objectStoreNames.contains('habits')) {
+                                db.createObjectStore('habits', { keyPath: 'id' });
                             }
                         };
                         request.onsuccess = (e) => {
@@ -83,6 +86,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             } else {
                 localStorage.setItem('premium-todos', JSON.stringify(todosArray));
+                return Promise.resolve();
+            }
+        },
+        async loadHabits() {
+            if (this.useIDB && this.db) {
+                return new Promise((resolve) => {
+                    const transaction = this.db.transaction(['habits'], 'readonly');
+                    const store = transaction.objectStore('habits');
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => resolve([]);
+                });
+            } else {
+                return JSON.parse(localStorage.getItem('premium-habits')) || [];
+            }
+        },
+        async saveAllHabits(habitsArray) {
+            if (this.useIDB && this.db) {
+                return new Promise((resolve) => {
+                    const transaction = this.db.transaction(['habits'], 'readwrite');
+                    const store = transaction.objectStore('habits');
+                    store.clear();
+                    habitsArray.forEach(h => store.put(h));
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => resolve();
+                });
+            } else {
+                localStorage.setItem('premium-habits', JSON.stringify(habitsArray));
                 return Promise.resolve();
             }
         }
@@ -132,6 +163,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         dueDateInput.min = today;
         dueDateInput.value = today;
     }
+
+
+    // Tabs Setup
+    const tabs = document.querySelectorAll('.nav-tab');
+    const viewsWrapper = document.getElementById('views-wrapper');
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Slide transition
+            viewsWrapper.style.transform = `translateX(-${index * 100}%)`;
+        });
+    });
+
+    // Habits State
+    let habits = await Storage.loadHabits();
+    const habitForm = document.getElementById('habit-form');
+    const habitInput = document.getElementById('habit-input');
+    const habitsListEl = document.getElementById('habits-list');
+    let lastHabitsState = '';
 
     // Global Handlers
     window.changeTodoStatus = (id, newStatus) => {
@@ -558,4 +610,193 @@ document.addEventListener('DOMContentLoaded', async () => {
             lastCompletedState = newCompletedState;
         }
     }
+
+    // Habits Logic
+    async function saveHabits() {
+        renderHabits();
+        await Storage.saveAllHabits(habits);
+    }
+
+    habitForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = habitInput.value.trim();
+        if (text) {
+            habits.push({
+                id: Date.now().toString(),
+                text: text,
+                createdAt: new Date().toISOString(),
+                history: {} // maps 'YYYY-MM-DD' to true
+            });
+            habitInput.value = '';
+            saveHabits();
+        }
+    });
+
+    window.deleteHabit = (id) => {
+        habits = habits.filter(h => h.id !== id);
+        saveHabits();
+    };
+
+    window.toggleHabitDay = (habitId, dateStr) => {
+        habits = habits.map(h => {
+            if(h.id === habitId) {
+                if(h.history[dateStr]) {
+                    delete h.history[dateStr];
+                } else {
+                    h.history[dateStr] = true;
+                }
+            }
+            return h;
+        });
+        saveHabits();
+    };
+
+    function calculateStreak(history) {
+        if (!history || Object.keys(history).length === 0) return 0;
+        const d = new Date();
+        d.setHours(0,0,0,0);
+        
+        const pad = (n) => String(n).padStart(2, '0');
+        let currentDayStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        let streak = 0;
+        
+        // If today is completed, start streak from today, else start from yesterday
+        if (history[currentDayStr]) {
+            streak = 1;
+            d.setDate(d.getDate() - 1);
+        } else {
+            d.setDate(d.getDate() - 1);
+            let yDayStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            if (history[yDayStr]) {
+                streak = 1;
+                d.setDate(d.getDate() - 1);
+            } else {
+                return 0; // neither today nor yesterday completed -> streak 0
+            }
+        }
+
+        // walk backwards
+        while(true) {
+            let s = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            if(history[s]) {
+                streak++;
+                d.setDate(d.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+        return streak;
+    }
+
+    function createHabitCard(habit) {
+        const div = document.createElement('div');
+        div.className = 'habit-card';
+        div.id = `habit-${habit.id}`;
+        
+        const streak = calculateStreak(habit.history);
+        
+        const nowLocal = new Date();
+        const year = nowLocal.getFullYear();
+        const month = nowLocal.getMonth();
+        const pad = (n) => String(n).padStart(2, '0');
+        
+        // Calculate monthly rate up to today
+        const daysInMonthToNow = nowLocal.getDate();
+        let completedThisMonth = 0;
+        for(let d=1; d<=daysInMonthToNow; d++) {
+            if (habit.history[`${year}-${pad(month+1)}-${pad(d)}`]) completedThisMonth++;
+        }
+        const rate = Math.round((completedThisMonth / daysInMonthToNow) * 100) || 0;
+        
+        div.innerHTML = `
+            <div class="habit-header">
+                <div>
+                    <h3 class="habit-title">${escapeHTML(habit.text)}</h3>
+                    <div class="habit-stats">
+                        <div class="habit-streak">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L2.5 8.5L8 14l-4 4-1 4 4-1 4-4 5.5 5.5c.3.3.7.3.8-.1l1.7-1.2c.4-.2.7-.6.6-1.1z"></path></svg>
+                            ${streak} Streak
+                        </div>
+                        <div class="habit-rate">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            ${rate}% Rate
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-icon btn-delete" onclick="window.deleteHabit('${habit.id}')" title="Delete Habit">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="habit-month-title">
+                <span>${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                <span style="font-size: 0.7rem; color: var(--primary);">${completedThisMonth}/${daysInMonthToNow} Days</span>
+            </div>
+            <div class="habit-calendar" id="calendar-${habit.id}"></div>
+        `;
+
+        const calContainer = div.querySelector('.habit-calendar');
+        const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        daysOfWeek.forEach(d => {
+            const span = document.createElement('span');
+            span.className = 'calendar-day-header';
+            span.textContent = d;
+            calContainer.appendChild(span);
+        });
+
+        // empty slots before 1st
+        for(let i = 0; i < firstDay; i++) {
+            const span = document.createElement('span');
+            span.className = 'calendar-day empty-day';
+            calContainer.appendChild(span);
+        }
+
+        let todayStr = `${year}-${pad(month+1)}-${pad(nowLocal.getDate())}`;
+
+        for(let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+            const span = document.createElement('span');
+            span.className = 'calendar-day';
+            if (dateStr === todayStr) span.classList.add('is-today');
+            if (habit.history[dateStr]) span.classList.add('completed');
+            
+            span.textContent = d;
+            
+            // disable future dates intuitively
+            const iterDate = new Date(year, month, d);
+            iterDate.setHours(23,59,59,999);
+            if(iterDate > nowLocal && d !== nowLocal.getDate()){
+                 span.style.opacity = '0.4';
+                 span.style.cursor = 'not-allowed';
+                 span.title = 'Cannot track future days';
+            } else {
+                 span.onclick = () => window.toggleHabitDay(habit.id, dateStr);
+                 span.title = `Toggle ${d}`;
+            }
+
+            calContainer.appendChild(span);
+        }
+
+        return div;
+    }
+
+    function renderHabits() {
+        const newHabitsState = JSON.stringify(habits);
+        if (newHabitsState !== lastHabitsState) {
+            habitsListEl.innerHTML = '';
+            if (habits.length === 0) {
+                habitsListEl.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">No habits tracked yet. Start building one today! 🌱</div>';
+            } else {
+                habits.forEach(h => {
+                    habitsListEl.appendChild(createHabitCard(h));
+                });
+            }
+            lastHabitsState = newHabitsState;
+        }
+    }
+    
+    // Initial render for habits
+    renderHabits();
 });

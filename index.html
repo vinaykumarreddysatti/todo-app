@@ -13,9 +13,9 @@
     <link rel="apple-touch-icon" href="icon.svg">
 
     <!-- Mobile Drag & Drop Polyfill -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
+    <link rel="stylesheet" href="vendor/mobile-drag-drop.min.css">
+    <script src="vendor/mobile-drag-drop.min.js"></script>
+    <script src="vendor/scroll-behaviour.min.js"></script>
     <script>
         MobileDragDrop.polyfill({
             dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
@@ -33,8 +33,24 @@
         <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         <svg class="moon-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
     </button>
-    <div class="app-container">
-        <!-- Left Section: Add Todos -->
+
+    <nav class="app-tabs">
+        <button class="nav-tab active" data-view="tasks-view">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            Tasks Tracker
+        </button>
+        <button class="nav-tab" data-view="habits-view">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Habit Builder
+        </button>
+    </nav>
+
+    <div class="views-viewport" style="overflow: hidden; width: 100%; padding-bottom: 2rem;">
+        <div id="views-wrapper" class="views-wrapper" style="display: flex; width: 100%; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);">
+    
+            <div class="view-panel" id="tasks-view">
+        <div class="app-container">
+            <!-- Left Section: Add Todos -->
         <section class="left-section" id="section-active">
             <header>
                 <h1>My Tasks</h1>
@@ -90,7 +106,36 @@
                 </div>
             </div>
         </section>
-    </div>
+        </div><!-- end .app-container -->
+    </div><!-- end #tasks-view -->
+
+    <div class="view-panel" id="habits-view">
+        <div class="habits-container">
+            <section class="habits-section">
+                <header>
+                    <h1>Habit Builder</h1>
+                    <p>Build consistency one day at a time</p>
+                </header>
+                
+                <form id="habit-form">
+                    <div class="input-group">
+                        <input type="text" id="habit-input" placeholder="E.g., Read for 30 minutes, Drink 2L water..." autocomplete="off" required>
+                        <button type="submit" id="add-habit-btn" class="add-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="habits-list-container">
+                    <div id="habits-list">
+                        <!-- Habits will be injected here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div><!-- end #habits-view -->
+        </div><!-- end #views-wrapper -->
+    </div><!-- end .views-viewport -->
 
     <script src="script.js"></script>
 </body>
