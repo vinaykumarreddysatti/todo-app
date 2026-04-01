@@ -174,7 +174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tab.classList.add('active');
             
             // Slide transition
-            viewsWrapper.style.transform = `translateX(-${index * 100}%)`;
+            const val = `translate3d(-${index * 100}%, 0, 0)`;
+            viewsWrapper.style.webkitTransform = val;
+            viewsWrapper.style.transform = val;
         });
     });
 
